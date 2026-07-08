@@ -1,6 +1,9 @@
-function NewNoteButton() {
+function NewNoteButton({ onClick }) {
   return (
-    <button className="px-5 py-3 bg-pink-300 text-white rounded-lg hover:bg-pink-400 transition">
+    <button
+      onClick={onClick}
+      className="px-5 py-3 bg-pink-300 text-white rounded-lg hover:bg-pink-400 transition"
+    >
       + New Note
     </button>
   );

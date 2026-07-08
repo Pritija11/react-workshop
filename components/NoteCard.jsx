@@ -1,4 +1,4 @@
-function NoteCard({ title, content, category, date }) {
+function NoteCard({ id, title, content, category, date, onDelete }) {
   const categoryColors = {
     Personal: "bg-pink-200 text-pink-800",
     Work: "bg-blue-200 text-blue-800",
@@ -22,6 +22,12 @@ function NoteCard({ title, content, category, date }) {
       <p className="text-gray-600 mb-4">{content}</p>
 
       <p className="text-sm text-gray-400">{date}</p>
+      <button
+  onClick={() => onDelete(id)}
+  className="mt-4 bg-red-400 text-white px-3 py-1 rounded"
+>
+  Delete
+</button>
     </div>
   );
 }
