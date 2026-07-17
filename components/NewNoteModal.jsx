@@ -1,22 +1,26 @@
 import { useState } from "react";
 
-function NewNoteModal({ onAddNote, onClose }) {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [category, setCategory] = useState("Personal");
+function NewNoteModal({ onAddNote, onClose, initialNote = null, onUpdateNote }) {
+  const [title, setTitle] = useState(initialNote?.title || "");
+  const [content, setContent] = useState(initialNote?.content || "");
+  const [category, setCategory] = useState(initialNote?.category || "Personal");
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const newNote = {
-      id: Date.now(),
+    const notePayload = {
+      id: initialNote?.id || Date.now(),
       title,
       content,
       category,
-      date: new Date().toLocaleDateString(),
+      date: initialNote?.date || new Date().toLocaleDateString(),
     };
 
-    onAddNote(newNote);
+    if (initialNote && onUpdateNote) {
+      onUpdateNote(notePayload);
+    } else {
+      onAddNote(notePayload);
+    }
 
     setTitle("");
     setContent("");
@@ -28,7 +32,9 @@ function NewNoteModal({ onAddNote, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center">
       <div className="bg-white p-6 rounded-xl w-96 shadow-lg">
-        <h2 className="text-2xl font-bold mb-4">New Note</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          {initialNote ? "Edit Note" : "New Note"}
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -72,7 +78,7 @@ function NewNoteModal({ onAddNote, onClose }) {
               type="submit"
               className="px-4 py-2 bg-pink-400 text-white rounded"
             >
-              Save
+              {initialNote ? "Update" : "Save"}
             </button>
           </div>
         </form>

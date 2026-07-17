@@ -1,6 +1,6 @@
 import NoteCard from "./NoteCard";
 
-function NoteGrid({ notes, onDelete }) {
+function NoteGrid({ notes, onDelete, onEdit }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {notes.map((note) => (
@@ -12,6 +12,7 @@ function NoteGrid({ notes, onDelete }) {
           category={note.category}
           date={note.date}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       ))}
     </div>
