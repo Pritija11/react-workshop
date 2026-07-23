@@ -2,9 +2,20 @@ import SearchBar from "../components/SearchBar";
 import NewNoteButton from "../components/NewNoteButton";
 import NoteGrid from "../components/NoteGrid";
 import NewNoteModal from "../components/NewNoteModal";
+import AuthForm from "../components/AuthForm";
 import { useState, useEffect } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const getApiBaseUrl = () => {
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  if (!configuredUrl) {
+    return "http://localhost:5000";
+  }
+
+  return configuredUrl.replace(/\/$/, "");
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 function App() {
   const [notes, setNotes] = useState([]);
@@ -13,11 +24,28 @@ function App() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [authMode, setAuthMode] = useState("login");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem("token") || "");
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   const fetchNotes = async () => {
+    if (!token) {
+      setNotes([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/notes`);
+      const response = await fetch(`${API_BASE_URL}/api/notes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to load notes: ${response.status}`);
@@ -45,7 +73,7 @@ function App() {
 
   useEffect(() => {
     fetchNotes();
-  }, []);
+  }, [token]);
 
   const addNote = async (newNote) => {
     try {
@@ -53,11 +81,13 @@ function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: newNote.title,
           body: newNote.content,
           category: newNote.category,
+          userId: user?._id || user?.id,
         }),
       });
 
@@ -90,6 +120,7 @@ function App() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title: updatedNote.title,
@@ -132,6 +163,9 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/notes/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
@@ -156,13 +190,93 @@ function App() {
     setShowModal(true);
   };
 
+  const handleAuthSubmit = async (formData) => {
+    setAuthLoading(true);
+    setError("");
+
+    try {
+      const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
+      const payload = {
+        name: formData.name?.trim(),
+        email: formData.email?.trim().toLowerCase(),
+        password: formData.password,
+      };
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Authentication failed");
+      }
+
+      if (authMode === "login") {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user || { email: payload.email }));
+        setToken(data.token);
+        setUser(data.user || { email: payload.email });
+      } else {
+        setAuthMode("login");
+        setError("Registration successful. Please log in.");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken("");
+    setUser(null);
+    setNotes([]);
+    setError("");
+  };
+
   const filteredNotes = notes.filter((note) =>
     note.title.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-pink-50 p-6">
+        <div className="mb-6 text-center">
+          <h1 className="text-3xl font-bold">My Notes</h1>
+          <p className="mt-2 text-gray-600">Register or login to manage your personal notes.</p>
+        </div>
+        <AuthForm
+          mode={authMode}
+          onSubmit={handleAuthSubmit}
+          loading={authLoading}
+          error={error}
+          onSwitchMode={setAuthMode}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-pink-50 p-6">
-      <h1 className="text-3xl font-bold mb-6 text-center">My Notes</h1>
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">My Notes</h1>
+          <p className="text-gray-600">Welcome back, {user?.name || user?.email || "user"}.</p>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="rounded bg-gray-700 px-4 py-2 text-white"
+        >
+          Logout
+        </button>
+      </div>
 
       {error ? (
         <p className="mb-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-700">
